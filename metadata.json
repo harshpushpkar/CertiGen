@@ -1,0 +1,5 @@
+{
+  "name": "Deep Eigen Certificate Generator",
+  "description": "A tool to generate and export course completion certificates with dynamic fields and bulk processing capabilities.",
+  "requestFramePermissions": []
+}

@@ -22,7 +22,7 @@ export const CertificateTemplate = forwardRef<HTMLDivElement, Props>(({ data, sc
       }}
       ref={ref}
     >
-      {/* Background Image Layer - EXCLUSIVE */}
+      {/* Background Image Layer */}
       {data.backgroundImage ? (
         <div className="absolute inset-0 z-0">
           <img 
@@ -33,9 +33,21 @@ export const CertificateTemplate = forwardRef<HTMLDivElement, Props>(({ data, sc
           />
         </div>
       ) : (
-        // Minimal placeholder to show boundaries if no image is uploaded yet
-        <div className="absolute inset-0 bg-gray-100 z-0 border border-dashed border-gray-300 flex items-center justify-center">
-          <p className="text-gray-400 text-sm uppercase tracking-widest">Upload Background Image</p>
+        // Default Vector Background (Deep Eigen Theme)
+        <div className="absolute inset-0 z-0 bg-[#1a0b2e]">
+            <svg width="100%" height="100%" xmlns="http://www.w3.org/2000/svg">
+                <defs>
+                    <linearGradient id="grad1" x1="0%" y1="0%" x2="100%" y2="100%">
+                        <stop offset="0%" style={{stopColor:"#0f0c29", stopOpacity:1}} />
+                        <stop offset="50%" style={{stopColor:"#302b63", stopOpacity:1}} />
+                        <stop offset="100%" style={{stopColor:"#24243e", stopOpacity:1}} />
+                    </linearGradient>
+                </defs>
+                <rect width="100%" height="100%" fill="url(#grad1)" />
+                {/* Gold Border */}
+                <rect x="20" y="20" width="calc(100% - 40px)" height="calc(100% - 40px)" fill="none" stroke="#d4af37" strokeWidth="2" />
+                <rect x="28" y="28" width="calc(100% - 56px)" height="calc(100% - 56px)" fill="none" stroke="#d4af37" strokeWidth="1" />
+            </svg>
         </div>
       )}
       
@@ -71,7 +83,7 @@ export const CertificateTemplate = forwardRef<HTMLDivElement, Props>(({ data, sc
         </div>
 
         {/* Footer Section: Signatures & Details */}
-        <div className="mt-auto pt-4 flex flex-row justify-between items-end w-full">
+        <div className="mt-auto pt-4 flex flex-row justify-between items-end w-full gap-4">
           
           {/* Instructor / Signatory - Centered Alignment */}
           <div className="flex flex-col min-w-[200px] items-center text-center">
@@ -85,12 +97,12 @@ export const CertificateTemplate = forwardRef<HTMLDivElement, Props>(({ data, sc
              )}
              {!data.signatureImage && <div className="h-12"></div>}
              <div className="h-px w-48 bg-gray-400 mb-2"></div>
-             <p className="text-lg font-bold drop-shadow-md text-white">{data.instructorName}</p>
-             <p className="text-xs text-gray-300 uppercase tracking-wide">{data.instructorDesignation}</p>
+             <p className="text-lg font-bold drop-shadow-md text-white whitespace-nowrap">{data.instructorName}</p>
+             <p className="text-xs text-gray-300 uppercase tracking-wide whitespace-nowrap">{data.instructorDesignation}</p>
           </div>
 
           {/* Date - Centered Alignment & Line Moved Up */}
-          <div className="flex flex-col min-w-[150px] items-center text-center pb-0.5">
+          <div className="flex flex-col min-w-[150px] items-center text-center pb-0.5 whitespace-nowrap">
             <p className="text-[10px] text-gray-400 uppercase tracking-wider mb-1">Awarded on</p>
             {/* Line moved between label and date */}
             <div className="h-px w-32 bg-gray-400 mb-1"></div>
@@ -98,18 +110,18 @@ export const CertificateTemplate = forwardRef<HTMLDivElement, Props>(({ data, sc
           </div>
 
           {/* QR & Verification */}
-          <div className="flex items-center gap-4 pl-4">
+          <div className="flex items-center gap-4 pl-2 shrink-0">
              <div className="flex flex-col items-end text-right space-y-1">
                <p className="text-[9px] text-gray-400 max-w-[160px] leading-tight opacity-80">
                  Certificates can be verified through the Deep Eigen AI Labs Website.
                </p>
-               <div className="flex flex-col items-end mt-0.5">
+               <div className="flex flex-col items-end mt-0.5 whitespace-nowrap">
                  <span className="text-[9px] text-[#d4af37] uppercase tracking-wider">Registration Code</span>
                  <span className="text-xs font-mono text-white tracking-wide">{data.registrationCode}</span>
                </div>
              </div>
              {data.qrImage && (
-               <div className="bg-white p-1 rounded-sm shadow-lg">
+               <div className="bg-white p-1 rounded-sm shadow-lg shrink-0">
                  <img 
                   src={data.qrImage} 
                   alt="QR" 

@@ -13,9 +13,5 @@ export interface CertificateData {
 }
 
 export interface CSVRow {
-  Name: string;
-  Course: string;
-  Registration: string;
-  Date?: string;
   [key: string]: string | undefined;
 }

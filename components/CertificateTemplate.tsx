@@ -29,7 +29,6 @@ export const CertificateTemplate = forwardRef<HTMLDivElement, Props>(({ data, sc
             src={data.backgroundImage} 
             alt="Certificate Background" 
             className="w-full h-full object-cover"
-            crossOrigin="anonymous"
           />
         </div>
       ) : (
@@ -55,25 +54,27 @@ export const CertificateTemplate = forwardRef<HTMLDivElement, Props>(({ data, sc
       <div className="relative z-20 w-full h-full flex flex-col px-24 py-20 text-white font-display">
         
         {/* Main Text Content */}
-        <div className="flex-1 flex flex-col items-start justify-center space-y-6 mt-4">
+        {/* Reduced space-y-6 to space-y-4 for tighter vertical rhythm */}
+        <div className="flex-1 flex flex-col items-start justify-center space-y-4 mt-2">
            <div className="space-y-1">
               <h1 className="text-4xl uppercase tracking-wider font-light text-gray-100">Certificate</h1>
-              {/* Changed text color to white as requested */}
+              {/* Changed text color to white as requested previously */}
               <p className="text-lg text-white uppercase tracking-widest font-semibold">of Course Completion</p>
            </div>
 
-           {/* Decorative Line */}
-           <div className="w-24 h-1 bg-[#d4af37] rounded-full opacity-80 my-2"></div>
+           {/* Decorative Line - Reduced margin */}
+           <div className="w-24 h-1 bg-[#d4af37] rounded-full opacity-80 my-1"></div>
 
-           <div className="space-y-6 w-full">
-             <div className="space-y-2">
-               <p className="text-lg font-light text-gray-200">This is to certify that</p>
+           <div className="space-y-5 w-full">
+             {/* Reduced gap between 'This is to certify' and Name */}
+             <div className="space-y-0">
+               <p className="text-lg font-light text-gray-200 mb-1">This is to certify that</p>
                <h2 className="text-5xl font-bold text-white tracking-tight leading-tight break-words drop-shadow-lg font-sans">
                  {data.candidateName || "Candidate Name"}
                </h2>
              </div>
              
-             <div className="space-y-2">
+             <div className="space-y-1">
                <p className="text-lg font-light text-gray-200">has successfully completed the course on</p>
                <h3 className="text-3xl text-[#d4af37] font-semibold break-words drop-shadow-md leading-snug max-w-[85%]">
                  “{data.courseName || "Course Name"}”
@@ -92,7 +93,6 @@ export const CertificateTemplate = forwardRef<HTMLDivElement, Props>(({ data, sc
                   src={data.signatureImage} 
                   alt="Signature" 
                   className="h-12 object-contain mb-2"
-                  crossOrigin="anonymous"
                />
              )}
              {!data.signatureImage && <div className="h-12"></div>}
@@ -126,7 +126,6 @@ export const CertificateTemplate = forwardRef<HTMLDivElement, Props>(({ data, sc
                   src={data.qrImage} 
                   alt="QR" 
                   className="w-16 h-16 object-contain"
-                  crossOrigin="anonymous"
                  />
                </div>
              )}

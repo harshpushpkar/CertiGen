@@ -331,7 +331,7 @@ export default function App() {
                   name="candidateName"
                   value={manualData.candidateName}
                   onChange={handleInputChange}
-                  className="w-full p-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-shadow"
+                  className="w-full p-2 bg-white text-gray-900 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-shadow"
                   placeholder="e.g. John Doe"
                 />
               </div>
@@ -343,7 +343,7 @@ export default function App() {
                   name="courseName"
                   value={manualData.courseName}
                   onChange={handleInputChange}
-                  className="w-full p-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-shadow"
+                  className="w-full p-2 bg-white text-gray-900 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-shadow"
                   placeholder="e.g. Intro to AI"
                 />
               </div>
@@ -356,7 +356,7 @@ export default function App() {
                       name="awardDate"
                       value={manualData.awardDate}
                       onChange={handleInputChange}
-                      className="w-full p-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 outline-none transition-shadow"
+                      className="w-full p-2 bg-white text-gray-900 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 outline-none transition-shadow"
                     />
                  </div>
                  <div>
@@ -366,7 +366,7 @@ export default function App() {
                       name="registrationCode"
                       value={manualData.registrationCode}
                       onChange={handleInputChange}
-                      className="w-full p-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 outline-none transition-shadow"
+                      className="w-full p-2 bg-white text-gray-900 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 outline-none transition-shadow"
                     />
                  </div>
               </div>
@@ -382,7 +382,7 @@ export default function App() {
                   name="instructorName"
                   value={manualData.instructorName}
                   onChange={handleInputChange}
-                  className="w-full p-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 outline-none transition-shadow"
+                  className="w-full p-2 bg-white text-gray-900 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 outline-none transition-shadow"
                 />
               </div>
                <div>
@@ -392,7 +392,7 @@ export default function App() {
                   name="instructorDesignation"
                   value={manualData.instructorDesignation}
                   onChange={handleInputChange}
-                  className="w-full p-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 outline-none transition-shadow"
+                  className="w-full p-2 bg-white text-gray-900 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 outline-none transition-shadow"
                 />
               </div>
 

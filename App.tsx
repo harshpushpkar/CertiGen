@@ -5,7 +5,9 @@ import { CertificateData, CSVRow } from './types';
 import { toPng, toJpeg } from 'html-to-image';
 import jsPDF from 'jspdf';
 import Papa from 'papaparse';
-import { Upload, Download, FileType, LayoutTemplate, Image as ImageIcon, FileText, CheckCircle, AlertCircle, Settings } from 'lucide-react';
+import JSZip from 'jszip';
+import FileSaver from 'file-saver';
+import { Upload, Download, FileType, LayoutTemplate, Image as ImageIcon, FileText, CheckCircle, AlertCircle, Settings, HelpCircle, Loader2, Archive } from 'lucide-react';
 
 // Default Assets (Base64 placeholders to ensure it works out of the box)
 const DEFAULT_SIGNATURE = "data:image/svg+xml;base64,PHN2ZwogIHdpZHRoPSIxNDAiCiAgaGVpZ2h0PSIxNDAiCiAgdmlld0JveD0iMCAwIDYwMCA2MDAiCiAgZmlsbD0ibm9uZSIKICB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciCiAgPgogIDxyZWN0IHdpZHRoPSI2MDAiIGhlaWdodD0iNjAwIiBmaWxsPSIjREZFM0U2IiAvPgogIDxwYXRoCiAgICBmaWxsLXJ1bGU9ImV2ZW5vZGQiCiAgICBjbGlwLXJ1bGU9ImV2ZW5vZGQiCiAgICBkPSJNNDUwIDE3MEgxNTBDMTQxLjcxNiAxNzAgMTM1IDE3Ni43MTYgMTM1IDE4NVY0MTVDMTM1IDQyMy4yODQgMTQxLjcxNiA0MzAgMTUwIDQzMEg0NTBDNDU4LjI4NCA0MzAgNDY1IDQyMy4yODQgNDY1IDQxNVYxODVDNDY1IDE3Ni43MTYgNDU4LjI4NCAxNzAgNDUwIDE3MFpNMTUwIDE0NUMxMjcuOTA5IDE0NSAxMTAgMTYyLjkwOSAxMTAgMTg1VjQxNUMxMTAgNDM3LjA5MSAxMjcuOTA5IDQ1NSAxNTAgNDU1SDQ1MEM0NzIuMDkxIDQ1NSA0OTAgNDM3LjA5MSA0OTAgNDE1VjE4NUM0OTAgMTYyLjkwOSA0NzIuMDkxIDE0NSA0NTAgMTQ1SDE1MFoiCiAgICBmaWxsPSIjQzFDOENEIgogIC8+CiAgPHBhdGgKICAgIGQ9Ik0yMzcuMTM1IDIzNS4wMTJDMjM3LjEzNSAyNTUuNzIzIDIyMC4zNDUgMjcyLjUxMiAxOTkuNjM1IDI3Mi41MTJDMTc4LjkyNCAyNzIuNTEyIDE2Mi4xMzUgMjU1LjcyMyAxNjIuMTM1IDIzNS4wMTJDMTYyLjEzNSAyMTQuMzAxIDE3OC45MjQgMTk3LjUxMiAxOTkuNjM1IDE5Ny41MTJDMjIwLjM0NSAxOTcuNTEyIDIzNy4xMzUgMjE0LjMwMSAyMzcuMTM1IDIzNS4wMTJaIgogICAgZmlsbD0iI0MxQzhDRCIKICAvPgogIDxwYXRoCiAgICBkPSJNMTYwIDQwNVYzNjcuMjA1TDIyMS42MDkgMzA2LjM2NEwyNTYuNTUyIDMzOC42MjhMMzU4LjE2MSAyMzRMNDQwIDMxNi4wNDNWNDA1SDE2MFoiCiAgICBmaWxsPSIjQzFDOENEIgogIC8+Cjwvc3ZnPg==";
@@ -26,13 +28,64 @@ const INITIAL_DATA: CertificateData = {
   backgroundImage: DEFAULT_BG,
 };
 
+// Helper to convert Google Drive links to useable Thumbnail URLs
+const processImageUrl = (url: string | undefined): string | undefined => {
+  if (!url) return undefined;
+  
+  // Check if it's a Google Drive Link
+  if (url.includes('drive.google.com')) {
+    try {
+      // Extract ID
+      const idMatch = url.match(/\/d\/(.*?)\/|id=(.*?)(&|$)/);
+      const id = idMatch ? (idMatch[1] || idMatch[2]) : null;
+      
+      if (id) {
+        // Return the thumbnail version which is more CORS friendly for embedding
+        // sz=w1000 asks for a width of 1000px (high quality)
+        return `https://drive.google.com/thumbnail?id=${id}&sz=w1000`;
+      }
+    } catch (e) {
+      console.warn("Failed to parse Google Drive URL", e);
+    }
+  }
+  
+  return url;
+};
+
+// Helper to Map CSV Row to Certificate Data
+const getCertificateData = (row: CSVRow | null, manualData: CertificateData): CertificateData => {
+  if (!row) return manualData;
+  
+  const rawSignature = row.signature || row.Signature;
+  const rawQr = row.qr || row.QR || row.Qr;
+  
+  return {
+     ...manualData,
+     candidateName: row.candidate || row.Candidate || row.Name || manualData.candidateName,
+     courseName: row.course || row.Course || manualData.courseName,
+     instructorName: row.instructor || row.Instructor || manualData.instructorName,
+     instructorDesignation: row.designation || row.Designation || manualData.instructorDesignation,
+     awardDate: row.date || row.Date || manualData.awardDate,
+     registrationCode: row.registration || row.Registration || manualData.registrationCode,
+     signatureImage: processImageUrl(rawSignature) || manualData.signatureImage,
+     qrImage: processImageUrl(rawQr) || manualData.qrImage,
+     // For bulk, background is usually global from manualData, but we preserve it here
+     backgroundImage: manualData.backgroundImage
+  };
+};
+
 export default function App() {
   const [activeTab, setActiveTab] = useState<'single' | 'bulk'>('single');
   const [manualData, setManualData] = useState<CertificateData>(INITIAL_DATA);
   const [bulkData, setBulkData] = useState<CSVRow[]>([]);
   const [currentBulkIndex, setCurrentBulkIndex] = useState(0);
+  const [overrideData, setOverrideData] = useState<CertificateData | null>(null);
   const exportRef = useRef<HTMLDivElement>(null);
   const [fontCss, setFontCss] = useState<string>("");
+  
+  // Bulk Generation States
+  const [isGenerating, setIsGenerating] = useState(false);
+  const [progress, setProgress] = useState({ current: 0, total: 0, status: '' });
 
   // Inject Fonts manually to avoid CORS/cssRules errors during export
   useEffect(() => {
@@ -56,23 +109,14 @@ export default function App() {
 
   // Determine what data to show in the certificate
   const displayData = useMemo(() => {
+    // If we are actively generating bulk files, use the override data
+    if (overrideData) return overrideData;
+
     if (activeTab === 'bulk' && bulkData.length > 0) {
-      const row = bulkData[currentBulkIndex];
-      // Merge manual data as fallback for missing assets like signature/logo/background if not in CSV
-      return {
-        ...manualData,
-        candidateName: row.candidate || row.Candidate || row.Name || manualData.candidateName,
-        courseName: row.course || row.Course || manualData.courseName,
-        instructorName: row.instructor || row.Instructor || manualData.instructorName,
-        instructorDesignation: row.designation || row.Designation || manualData.instructorDesignation,
-        awardDate: row.date || row.Date || manualData.awardDate,
-        registrationCode: row.registration || row.Registration || manualData.registrationCode,
-        signatureImage: row.signature || manualData.signatureImage,
-        qrImage: row.qr || manualData.qrImage,
-      };
+      return getCertificateData(bulkData[currentBulkIndex], manualData);
     }
     return manualData;
-  }, [activeTab, bulkData, currentBulkIndex, manualData]);
+  }, [activeTab, bulkData, currentBulkIndex, manualData, overrideData]);
 
   // Input Handlers
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
@@ -127,7 +171,7 @@ export default function App() {
     filter: (node: HTMLElement) => node.tagName !== 'SCRIPT',
   });
 
-  // Export Functions
+  // Single File Export Functions
   const downloadImage = async (format: 'png' | 'jpeg') => {
     if (!exportRef.current) return;
     try {
@@ -163,9 +207,88 @@ export default function App() {
     }
   };
 
-  return (
-    <div className="min-h-screen flex flex-col lg:flex-row">
+  // Bulk Export Function
+  const handleBulkExport = async (format: 'pdf' | 'image') => {
+    if (bulkData.length === 0) return;
+    
+    setIsGenerating(true);
+    setProgress({ current: 0, total: bulkData.length, status: 'Initializing...' });
+    const zip = new JSZip();
+    const folderName = `certificates_${new Date().toISOString().split('T')[0]}`;
+    const folder = zip.folder(folderName);
+
+    try {
+      // Loop through all rows
+      for (let i = 0; i < bulkData.length; i++) {
+        const row = bulkData[i];
+        const rowData = getCertificateData(row, manualData);
+        const filename = `${rowData.candidateName.replace(/[^a-z0-9]/gi, '_')}_${rowData.registrationCode || i}`;
+        
+        // Update state to force the hidden exportRef to render this row
+        setOverrideData(rowData);
+        setProgress({ current: i + 1, total: bulkData.length, status: `Generating ${rowData.candidateName}...` });
+
+        // Allow React to render the hidden component
+        await new Promise(resolve => setTimeout(resolve, 100));
+
+        if (!exportRef.current) continue;
+
+        if (format === 'pdf') {
+             const imgData = await toPng(exportRef.current, getExportOptions());
+             const pdf = new jsPDF({ orientation: 'landscape', unit: 'mm', format: 'a4' });
+             const pdfWidth = pdf.internal.pageSize.getWidth();
+             const pdfHeight = pdf.internal.pageSize.getHeight();
+             pdf.addImage(imgData, 'PNG', 0, 0, pdfWidth, pdfHeight);
+             const pdfBlob = pdf.output('blob');
+             folder?.file(`${filename}.pdf`, pdfBlob);
+        } else {
+             // Image (PNG)
+             const imgData = await toPng(exportRef.current, getExportOptions());
+             const base64Data = imgData.split(',')[1];
+             folder?.file(`${filename}.png`, base64Data, { base64: true });
+        }
+      }
+
+      // Generate Zip
+      setProgress(prev => ({ ...prev, status: 'Compressing files...' }));
+      const content = await zip.generateAsync({ type: 'blob' });
       
+      // Robust saveAs handling for various build environments
+      const saveFile = (FileSaver as any).saveAs || (FileSaver as any).default?.saveAs || FileSaver;
+      saveFile(content, `${folderName}.zip`);
+      
+    } catch (error) {
+      console.error("Bulk Export Error", error);
+      alert("An error occurred during bulk export. Check console for details.");
+    } finally {
+      setIsGenerating(false);
+      setOverrideData(null); // Reset to normal view
+      setProgress({ current: 0, total: 0, status: '' });
+    }
+  };
+
+  return (
+    <div className="min-h-screen flex flex-col lg:flex-row relative">
+      
+      {/* Progress Overlay */}
+      {isGenerating && (
+        <div className="fixed inset-0 z-50 bg-black/70 backdrop-blur-sm flex flex-col items-center justify-center text-white">
+           <div className="bg-white text-gray-900 p-8 rounded-xl shadow-2xl max-w-sm w-full text-center">
+              <Loader2 className="w-10 h-10 text-blue-600 animate-spin mx-auto mb-4" />
+              <h3 className="text-lg font-bold mb-2">Generating Certificates</h3>
+              <p className="text-sm text-gray-500 mb-6">{progress.status}</p>
+              
+              <div className="w-full bg-gray-200 rounded-full h-2.5 mb-2 overflow-hidden">
+                <div 
+                  className="bg-blue-600 h-2.5 rounded-full transition-all duration-300" 
+                  style={{ width: `${(progress.current / progress.total) * 100}%` }}
+                ></div>
+              </div>
+              <p className="text-xs text-gray-400 text-right">{progress.current} / {progress.total}</p>
+           </div>
+        </div>
+      )}
+
       {/* Sidebar / Controls */}
       <div className="w-full lg:w-[450px] bg-white border-r border-gray-200 flex flex-col h-auto lg:h-screen shadow-xl z-10">
         
@@ -414,17 +537,26 @@ export default function App() {
 
               {/* Instructions */}
               <div className="bg-gray-50 rounded-xl p-5 border border-gray-100">
-                <h3 className="text-sm font-bold text-gray-900 mb-3">File Format:</h3>
+                <h3 className="text-sm font-bold text-gray-900 mb-3 flex items-center gap-2">
+                    <HelpCircle className="w-4 h-4" /> Image & File Tips
+                </h3>
+                <div className="bg-yellow-50 p-3 rounded border border-yellow-100 mb-4">
+                    <p className="text-xs text-yellow-800 font-medium mb-1">⚠️ Images Not Loading?</p>
+                    <p className="text-[11px] text-yellow-700 leading-relaxed">
+                        Google Drive links often block automated exports. <br/>
+                        <strong>Recommended:</strong> Use Base64 strings in your CSV for 100% reliability, or use public direct links (like Imgur or S3).
+                    </p>
+                </div>
                 <p className="text-xs text-gray-500 mb-3">Your file should have the following columns:</p>
                 <ul className="space-y-2">
                     {[
                         { label: "candidate", desc: "Name of the candidate" },
                         { label: "course", desc: "Name of the course" },
-                        { label: "signature", desc: "URL or base64 of signature image" },
+                        { label: "signature", desc: "Base64 string or Direct Image URL" },
                         { label: "instructor", desc: "Name of the instructor" },
                         { label: "designation", desc: "Instructor designation" },
                         { label: "date", desc: "Award date" },
-                        { label: "qr", desc: "URL or base64 of QR code image" },
+                        { label: "qr", desc: "Base64 string or Direct Image URL" },
                         { label: "registration", desc: "Registration code" },
                     ].map((item, i) => (
                         <li key={i} className="text-xs text-gray-600 flex items-start gap-2">
@@ -442,26 +574,47 @@ export default function App() {
 
         {/* Footer Actions */}
         <div className="p-6 border-t border-gray-200 bg-gray-50 sticky bottom-0 z-20 space-y-2">
-          <button 
-            onClick={downloadPDF}
-            className="w-full flex justify-center items-center gap-2 bg-red-600 hover:bg-red-700 text-white py-2.5 px-4 rounded-md shadow-sm font-medium transition-all active:scale-95"
-          >
-            <FileType className="w-4 h-4" /> Export Current as PDF
-          </button>
-          <div className="grid grid-cols-2 gap-2">
-            <button 
-              onClick={() => downloadImage('png')}
-              className="flex justify-center items-center gap-2 bg-white border border-gray-300 hover:bg-gray-50 text-gray-700 py-2 px-4 rounded-md shadow-sm text-sm font-medium transition-all active:scale-95"
-            >
-              <Download className="w-4 h-4" /> PNG
-            </button>
-            <button 
-              onClick={() => downloadImage('jpeg')}
-              className="flex justify-center items-center gap-2 bg-white border border-gray-300 hover:bg-gray-50 text-gray-700 py-2 px-4 rounded-md shadow-sm text-sm font-medium transition-all active:scale-95"
-            >
-              <Download className="w-4 h-4" /> JPEG
-            </button>
-          </div>
+          
+          {activeTab === 'single' || bulkData.length === 0 ? (
+             <>
+                <button 
+                    onClick={downloadPDF}
+                    className="w-full flex justify-center items-center gap-2 bg-red-600 hover:bg-red-700 text-white py-2.5 px-4 rounded-md shadow-sm font-medium transition-all active:scale-95"
+                >
+                    <FileType className="w-4 h-4" /> Export Current as PDF
+                </button>
+                <div className="grid grid-cols-2 gap-2">
+                    <button 
+                    onClick={() => downloadImage('png')}
+                    className="flex justify-center items-center gap-2 bg-white border border-gray-300 hover:bg-gray-50 text-gray-700 py-2 px-4 rounded-md shadow-sm text-sm font-medium transition-all active:scale-95"
+                    >
+                    <Download className="w-4 h-4" /> PNG
+                    </button>
+                    <button 
+                    onClick={() => downloadImage('jpeg')}
+                    className="flex justify-center items-center gap-2 bg-white border border-gray-300 hover:bg-gray-50 text-gray-700 py-2 px-4 rounded-md shadow-sm text-sm font-medium transition-all active:scale-95"
+                    >
+                    <Download className="w-4 h-4" /> JPEG
+                    </button>
+                </div>
+             </>
+          ) : (
+              <>
+                <button 
+                    onClick={() => handleBulkExport('pdf')}
+                    className="w-full flex justify-center items-center gap-2 bg-brand-dark hover:bg-gray-800 text-white py-3 px-4 rounded-md shadow-sm font-medium transition-all active:scale-95"
+                >
+                    <Archive className="w-4 h-4" /> Download All as ZIP (PDFs)
+                </button>
+                <button 
+                    onClick={() => handleBulkExport('image')}
+                    className="w-full flex justify-center items-center gap-2 bg-white border border-gray-300 hover:bg-gray-50 text-gray-700 py-2 px-4 rounded-md shadow-sm text-sm font-medium transition-all active:scale-95"
+                >
+                    <Archive className="w-4 h-4" /> Download All as ZIP (Images)
+                </button>
+              </>
+          )}
+
         </div>
 
       </div>
@@ -490,6 +643,7 @@ export default function App() {
 
       {/* Hidden Export Render */}
       <div style={{ position: "fixed", left: "-9999px", top: "-9999px", zIndex: -1 }}>
+        {/* We render either the displayData OR the overrideData (for bulk loop) */}
         <CertificateTemplate ref={exportRef} data={displayData} scale={1} />
       </div>
 
